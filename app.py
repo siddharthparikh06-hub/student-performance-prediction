@@ -343,6 +343,11 @@ def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
     return app
 
 
+app = create_app()
+
 if __name__ == "__main__":
-    app = create_app()
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    import os
+    # Render provides PORT; default to 5000 for local runs.
+    port = int(os.getenv("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
+
