@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Student Performance Prediction System - Dashboard Stylesheet
+   Student Performance & College CGPA Prediction - Dashboard Stylesheet
    Aesthetic: Refined, Professional Academic & Data-Analytics Dashboard
    ========================================================================== */
 
@@ -8,6 +8,9 @@
     --primary-hover: #1e40af;
     --primary-light: #eff6ff;
     --primary-accent: #3b82f6;
+
+    --college-accent: #0284c7;
+    --college-light: #f0f9ff;
 
     --navy-dark: #0f172a;
     --navy-sidebar: #1e293b;
@@ -91,7 +94,7 @@ code {
 
 /* Sidebar */
 .app-sidebar {
-    width: 260px;
+    width: 270px;
     background-color: var(--navy-sidebar);
     color: var(--text-light);
     display: flex;
@@ -105,7 +108,7 @@ code {
 }
 
 .sidebar-brand {
-    padding: 1.5rem 1.25rem;
+    padding: 1.35rem 1.25rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -133,13 +136,62 @@ code {
 .brand-text span {
     font-size: 0.75rem;
     color: var(--text-muted);
+    letter-spacing: 0.03em;
+}
+
+/* Sidebar Domain Switcher */
+.sidebar-domain-switch {
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.domain-switch-label {
+    display: block;
+    font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
+}
+
+.domain-pill-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.domain-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background-color: rgba(255, 255, 255, 0.04);
+    color: #cbd5e1;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+}
+
+.domain-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.domain-btn.active {
+    background-color: var(--primary-accent);
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .sidebar-nav {
     flex: 1;
-    padding: 1.25rem 0.75rem;
+    padding: 1rem 0.75rem;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -149,10 +201,10 @@ code {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    padding: 0.7rem 1rem;
     border-radius: var(--radius-sm);
     color: #cbd5e1;
-    font-size: 0.925rem;
+    font-size: 0.9rem;
     font-weight: 500;
     transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -187,7 +239,7 @@ code {
 /* Main Content Area */
 .app-main {
     flex: 1;
-    margin-left: 260px;
+    margin-left: 270px;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -197,7 +249,7 @@ code {
 .app-topbar {
     background-color: var(--bg-card);
     border-bottom: 1px solid var(--border-color);
-    padding: 1.25rem 2rem;
+    padding: 1.15rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -222,7 +274,7 @@ code {
 }
 
 .page-title {
-    font-size: 1.35rem;
+    font-size: 1.3rem;
     font-weight: 700;
     color: var(--navy-dark);
 }
@@ -230,6 +282,39 @@ code {
 .page-subtitle {
     font-size: 0.85rem;
     color: var(--text-muted);
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Topbar Mode Switcher */
+.topbar-mode-switcher {
+    display: flex;
+    background-color: var(--bg-card-muted);
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+}
+
+.topbar-mode-btn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.topbar-mode-btn.active {
+    background-color: #ffffff;
+    color: var(--primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 /* Status Badge */
@@ -301,6 +386,12 @@ code {
     gap: 2.5rem;
 }
 
+.domain-view {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+}
+
 .dashboard-section {
     scroll-margin-top: 5rem;
 }
@@ -322,6 +413,37 @@ code {
 }
 
 /* --------------------------------------------------------------------------
+   Notice Banners & Alerts
+   -------------------------------------------------------------------------- */
+.notice-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    background-color: var(--college-light);
+    border-left: 4px solid var(--college-accent);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.notice-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.notice-body h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--navy-dark);
+    margin-bottom: 0.25rem;
+}
+
+.notice-body p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+/* --------------------------------------------------------------------------
    Cards System
    -------------------------------------------------------------------------- */
 .card {
@@ -332,7 +454,6 @@ code {
     padding: 1.5rem;
 }
 
-/* State Cards */
 .info-state {
     display: flex;
     align-items: center;
@@ -459,6 +580,34 @@ code {
     padding: 1.75rem;
 }
 
+.form-section-title {
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.form-section-title h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--navy-dark);
+}
+
+.optional-title {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.badge-disclaimer {
+    font-size: 0.7rem;
+    background-color: var(--bg-card-muted);
+    color: var(--text-muted);
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+}
+
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -530,7 +679,7 @@ code {
 .form-actions {
     display: flex;
     gap: 0.75rem;
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
 }
 
 .btn {
@@ -652,6 +801,15 @@ code {
 .result-date {
     font-size: 0.775rem;
     color: var(--text-muted);
+}
+
+.metadata-echo {
+    background-color: var(--bg-page);
+    border: 1px dashed var(--border-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
 }
 
 .prediction-cards-container {
@@ -812,10 +970,10 @@ code {
 }
 
 .model-notes {
-    background-color: var(--primary-light);
+    background-color: var(--college-light);
     padding: 0.85rem;
     border-radius: var(--radius-sm);
-    border-left: 3px solid var(--primary);
+    border-left: 3px solid var(--college-accent);
 }
 
 /* --------------------------------------------------------------------------
@@ -947,6 +1105,14 @@ code {
 
     .app-topbar {
         padding: 1rem 1.25rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .topbar-right {
+        width: 100%;
+        justify-content: space-between;
     }
 
     .footer-content {

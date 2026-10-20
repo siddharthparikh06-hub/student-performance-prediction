@@ -1,0 +1,36 @@
+{
+  "domain": "College CGPA Prediction",
+  "features": [
+    "Study_Hours"
+  ],
+  "target": "CGPA",
+  "target_range": [
+    0.0,
+    10.0
+  ],
+  "training_metadata": {
+    "raw_train_samples": 999,
+    "deduplicated_train_samples": 997,
+    "duplicates_removed": 2,
+    "test_samples": 199,
+    "feature_notes": "Experimental model using daily Study_Hours as the sole predictive feature."
+  },
+  "models": {
+    "linear_regression": {
+      "name": "Linear Regression",
+      "metrics": {
+        "mae": 0.2868,
+        "rmse": 0.3379,
+        "r2": 0.9759
+      }
+    },
+    "svr": {
+      "name": "Support Vector Regression (SVR)",
+      "metrics": {
+        "mae": 0.2943,
+        "rmse": 0.3457,
+        "r2": 0.9748
+      }
+    }
+  }
+}

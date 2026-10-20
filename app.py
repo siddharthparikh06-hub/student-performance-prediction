@@ -1,9 +1,10 @@
 """
-Student Performance Prediction - Flask Backend Application
+Student Performance & College CGPA Prediction - Flask Backend Application
 Module: app.py
 
-Provides web and API endpoints for student performance prediction,
-model health status, and metric comparisons.
+Provides web and API endpoints for:
+1. School academic score prediction (UCI dataset standard, target G3).
+2. College CGPA prediction (Study_Hours to CGPA regression).
 """
 
 import json
@@ -16,6 +17,7 @@ import pandas as pd
 
 from config import Config
 
+# --- School Prediction Configuration ---
 REQUIRED_FEATURES = ["G1", "G2", "studytime", "failures", "absences"]
 
 FEATURE_CONSTRAINTS = {
@@ -25,6 +27,10 @@ FEATURE_CONSTRAINTS = {
     "failures": {"min": 0.0, "max": 4.0, "label": "Past class failures (0-4)"},
     "absences": {"min": 0.0, "max": 100.0, "label": "Number of absences (0-100)"},
 }
+
+# --- College Prediction Configuration ---
+COLLEGE_REQUIRED_FEATURES = ["Study_Hours"]
+COLLEGE_OPTIONAL_METADATA = ["student_name", "student_id", "department", "semester"]
 
 
 def load_artifacts(models_dir: Path) -> Dict[str, Any]:
@@ -63,7 +69,7 @@ def load_artifacts(models_dir: Path) -> Dict[str, Any]:
 
 def validate_prediction_input(payload: Any) -> Tuple[Optional[Dict[str, float]], Optional[str]]:
     """
-    Validates prediction payload.
+    Validates school prediction payload.
     Ensures JSON object format, presence of all required features,
     numeric data types, and value range constraints.
     """
@@ -99,6 +105,42 @@ def validate_prediction_input(payload: Any) -> Tuple[Optional[Dict[str, float]],
     return validated_values, None
 
 
+def validate_college_prediction_input(
+    payload: Any,
+) -> Tuple[Optional[Dict[str, float]], Optional[Dict[str, str]], Optional[str]]:
+    """
+    Validates college CGPA prediction payload.
+    Ensures JSON object format, presence of Study_Hours,
+    numeric data types, and realistic range [0.0, 24.0] hours/day.
+    Captures optional metadata without using it as predictive features.
+    """
+    if not isinstance(payload, dict):
+        return None, None, "Request body must be a JSON object."
+
+    if "Study_Hours" not in payload:
+        return None, None, "Missing required feature: 'Study_Hours'."
+
+    val = payload["Study_Hours"]
+    if isinstance(val, bool) or val is None:
+        return None, None, "Feature 'Study_Hours' must be a valid numeric value."
+
+    try:
+        study_hours = float(val)
+    except (ValueError, TypeError):
+        return None, None, f"Feature 'Study_Hours' must be a valid number, got: {val}."
+
+    if not (0.0 <= study_hours <= 24.0):
+        return None, None, f"Daily study hours must be between 0.0 and 24.0, got: {study_hours}."
+
+    # Extract optional metadata
+    metadata = {}
+    for meta_key in COLLEGE_OPTIONAL_METADATA:
+        if meta_key in payload and payload[meta_key] is not None:
+            metadata[meta_key] = str(payload[meta_key]).strip()
+
+    return {"Study_Hours": study_hours}, metadata, None
+
+
 def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
     """Application factory for Flask backend."""
     app = Flask(__name__)
@@ -108,7 +150,11 @@ def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
         app.config.update(test_config)
 
     models_dir = Path(app.config.get("MODELS_DIR", Config.MODELS_DIR)).resolve()
+    college_models_dir = Path(app.config.get("COLLEGE_MODELS_DIR", Config.COLLEGE_MODELS_DIR)).resolve()
 
+    # -------------------------------------------------------------------------
+    # Frontend Route
+    # -------------------------------------------------------------------------
     @app.route("/")
     def index():
         try:
@@ -116,9 +162,12 @@ def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
         except Exception:
             return jsonify({
                 "status": "online",
-                "message": "Student Performance Prediction API is running."
+                "message": "Student Performance & College CGPA Prediction API is running."
             }), 200
 
+    # -------------------------------------------------------------------------
+    # School API Endpoints
+    # -------------------------------------------------------------------------
     @app.route("/api/health", methods=["GET"])
     def health():
         artifacts = load_artifacts(models_dir)
@@ -194,6 +243,95 @@ def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
                 "error": f"Model inference failed: {str(exc)}"
             }), 500
 
+    # -------------------------------------------------------------------------
+    # College CGPA API Endpoints
+    # -------------------------------------------------------------------------
+    @app.route("/api/college/health", methods=["GET"])
+    def college_health():
+        artifacts = load_artifacts(college_models_dir)
+        lr_loaded = artifacts["linear_regression"] is not None
+        svr_loaded = artifacts["svr"] is not None
+        metrics_loaded = artifacts["metrics"] is not None
+
+        models_available = lr_loaded and svr_loaded
+        status = "healthy" if (models_available and metrics_loaded) else "degraded"
+
+        return jsonify({
+            "status": status,
+            "models_available": models_available,
+            "metrics_available": metrics_loaded,
+            "models": {
+                "linear_regression": lr_loaded,
+                "svr": svr_loaded,
+            },
+        }), 200
+
+    @app.route("/api/college/metrics", methods=["GET"])
+    def get_college_metrics():
+        artifacts = load_artifacts(college_models_dir)
+        metrics = artifacts["metrics"]
+
+        if metrics is None:
+            return jsonify({
+                "error": "College model evaluation metrics are not available. Please train college models first."
+            }), 503
+
+        return jsonify(metrics), 200
+
+    @app.route("/api/college/predict", methods=["POST"])
+    def college_predict():
+        if not request.is_json:
+            return jsonify({"error": "Content-Type must be application/json."}), 400
+
+        try:
+            payload = request.get_json(silent=True)
+        except Exception:
+            return jsonify({"error": "Malformed JSON in request body."}), 400
+
+        if payload is None:
+            return jsonify({"error": "Invalid or empty JSON payload."}), 400
+
+        validated_values, metadata, error_msg = validate_college_prediction_input(payload)
+        if error_msg:
+            return jsonify({"error": error_msg}), 400
+
+        artifacts = load_artifacts(college_models_dir)
+        lr_model = artifacts["linear_regression"]
+        svr_model = artifacts["svr"]
+
+        if lr_model is None or svr_model is None:
+            return jsonify({
+                "error": "Trained college models are not available. Please ensure college models are trained and saved."
+            }), 503
+
+        try:
+            input_df = pd.DataFrame([validated_values], columns=COLLEGE_REQUIRED_FEATURES)
+            raw_lr_pred = float(lr_model.predict(input_df)[0])
+            raw_svr_pred = float(svr_model.predict(input_df)[0])
+
+            # Ensure displayed predictions remain within the valid CGPA range of 0.0 to 10.0
+            lr_pred = max(0.0, min(10.0, raw_lr_pred))
+            svr_pred = max(0.0, min(10.0, raw_svr_pred))
+
+            response_data = {
+                "features": validated_values,
+                "predictions": {
+                    "linear_regression": round(lr_pred, 2),
+                    "svr": round(svr_pred, 2),
+                },
+            }
+            if metadata:
+                response_data["metadata"] = metadata
+
+            return jsonify(response_data), 200
+        except Exception as exc:
+            return jsonify({
+                "error": f"College model inference failed: {str(exc)}"
+            }), 500
+
+    # -------------------------------------------------------------------------
+    # Global Error Handlers
+    # -------------------------------------------------------------------------
     @app.errorhandler(404)
     def not_found(error):
         return jsonify({"error": "Resource not found."}), 404
