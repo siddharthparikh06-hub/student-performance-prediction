@@ -1,0 +1,34 @@
+{
+  "features": [
+    "G1",
+    "G2",
+    "studytime",
+    "failures",
+    "absences"
+  ],
+  "target": "G3",
+  "split_settings": {
+    "test_size": 0.2,
+    "random_state": 42,
+    "train_samples": 316,
+    "test_samples": 79
+  },
+  "models": {
+    "linear_regression": {
+      "name": "Linear Regression",
+      "metrics": {
+        "mae": 1.3394,
+        "rmse": 2.1134,
+        "r2": 0.7822
+      }
+    },
+    "svr": {
+      "name": "Support Vector Regression (SVR)",
+      "metrics": {
+        "mae": 1.3223,
+        "rmse": 2.2235,
+        "r2": 0.7589
+      }
+    }
+  }
+}

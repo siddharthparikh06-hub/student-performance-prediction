@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Student Performance Prediction System - Academic score prediction comparing Linear Regression and Support Vector Regression (SVR).">
+    <title>{% block title %}Student Performance Prediction Dashboard{% endblock %}</title>
+
+    <!-- Project Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- External Dependency: Chart.js pinned version 4.4.4 for model benchmark visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                        <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h2>EduPredict ML</h2>
+                    <span>Student Analytics</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Main Navigation">
+                <a href="#overview" class="nav-item active" id="navOverview">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    <span>Overview</span>
+                </a>
+                <a href="#predict" class="nav-item" id="navPredict">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span>Predict Performance</span>
+                </a>
+                <a href="#comparison" class="nav-item" id="navComparison">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    <span>Model Comparison</span>
+                </a>
+                <a href="#recent" class="nav-item" id="navRecent">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>Recent Predictions</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <p class="model-tag">Models: Linear Regression vs SVR</p>
+                <p class="split-tag">Split: 80% Train / 20% Test (Seed 42)</p>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Content -->
+        <div class="app-main">
+            <!-- Header Bar -->
+            <header class="app-topbar">
+                <div class="topbar-left">
+                    <button class="mobile-toggle" id="mobileMenuBtn" aria-label="Toggle navigation menu">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 class="page-title">Student Performance Prediction System</h1>
+                        <p class="page-subtitle">Machine Learning Regression Dashboard • UCI Student Dataset Standard</p>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <div id="systemStatusBadge" class="status-badge status-checking">
+                        <span class="status-dot"></span>
+                        <span id="statusText" class="status-label">Checking System...</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Body -->
+            <main class="dashboard-body">
+                {% block content %}
+                <!-- SECTION 1: OVERVIEW -->
+                <section id="overview" class="dashboard-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>Model Benchmark Overview</h2>
+                            <p class="section-desc">Performance metrics calculated on the held-out 20% test dataset (seed: 42).</p>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Loading State -->
+                    <div id="metricsLoading" class="card info-state">
+                        <div class="spinner"></div>
+                        <p>Fetching evaluation metrics from backend...</p>
+                    </div>
+
+                    <!-- Metrics Not Available Empty State -->
+                    <div id="metricsUnavailable" class="card alert-state" style="display: none;">
+                        <div class="alert-icon">⚠️</div>
+                        <div class="alert-content">
+                            <h3>Model Artifacts Not Detected</h3>
+                            <p>No trained models or evaluation metrics were found in <code>models/</code>. Please run the training pipeline to generate model weights and metrics:</p>
+                            <code>python ml/train_model.py</code>
+                        </div>
+                    </div>
+
+                    <!-- Overview Metrics Grid -->
+                    <div id="overviewMetricsGrid" class="metrics-grid" style="display: none;">
+                        <!-- MAE Card -->
+                        <div class="card metric-card">
+                            <div class="metric-card-header">
+                                <span class="metric-title">Mean Absolute Error (MAE)</span>
+                                <span class="metric-badge">Lower is better</span>
+                            </div>
+                            <div class="metric-comparison-row">
+                                <div class="metric-model-val">
+                                    <span class="model-name">Linear Regression</span>
+                                    <span class="stat-number" id="lrMae">-</span>
+                                </div>
+                                <div class="metric-divider"></div>
+                                <div class="metric-model-val">
+                                    <span class="model-name">Support Vector Regression (SVR)</span>
+                                    <span class="stat-number" id="svrMae">-</span>
+                                </div>
+                            </div>
+                            <p class="metric-footnote">Average absolute difference between predicted and actual final grades (G3).</p>
+                        </div>
+
+                        <!-- RMSE Card -->
+                        <div class="card metric-card">
+                            <div class="metric-card-header">
+                                <span class="metric-title">Root Mean Squared Error (RMSE)</span>
+                                <span class="metric-badge">Lower is better</span>
+                            </div>
+                            <div class="metric-comparison-row">
+                                <div class="metric-model-val">
+                                    <span class="model-name">Linear Regression</span>
+                                    <span class="stat-number" id="lrRmse">-</span>
+                                </div>
+                                <div class="metric-divider"></div>
+                                <div class="metric-model-val">
+                                    <span class="model-name">Support Vector Regression (SVR)</span>
+                                    <span class="stat-number" id="svrRmse">-</span>
+                                </div>
+                            </div>
+                            <p class="metric-footnote">Square root of mean squared residuals; penalizes larger errors more heavily.</p>
+                        </div>
+
+                        <!-- R2 Card -->
+                        <div class="card metric-card">
+                            <div class="metric-card-header">
+                                <span class="metric-title">Coefficient of Determination (R²)</span>
+                                <span class="metric-badge highlight-badge">Higher is better</span>
+                            </div>
+                            <div class="metric-comparison-row">
+                                <div class="metric-model-val">
+                                    <span class="model-name">Linear Regression</span>
+                                    <span class="stat-number" id="lrR2">-</span>
+                                </div>
+                                <div class="metric-divider"></div>
+                                <div class="metric-model-val">
+                                    <span class="model-name">Support Vector Regression (SVR)</span>
+                                    <span class="stat-number" id="svrR2">-</span>
+                                </div>
+                            </div>
+                            <p class="metric-footnote">Proportion of variance in final grades explained by academic and study features.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 2: PREDICTION FORM -->
+                <section id="predict" class="dashboard-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>Predict Academic Score (G3)</h2>
+                            <p class="section-desc">Enter the student's academic history to generate real-time predictions from both ML models.</p>
+                        </div>
+                    </div>
+
+                    <div class="predict-grid">
+                        <!-- Input Form Card -->
+                        <div class="card form-card">
+                            <form id="predictionForm" novalidate>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="g1Input">First Period Grade (G1)</label>
+                                        <input type="number" id="g1Input" name="G1" min="0" max="20" step="0.5" value="12" required class="form-control">
+                                        <span class="form-hint">Scale: 0.0 to 20.0 points</span>
+                                        <span class="field-error" id="g1Error"></span>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="g2Input">Second Period Grade (G2)</label>
+                                        <input type="number" id="g2Input" name="G2" min="0" max="20" step="0.5" value="13" required class="form-control">
+                                        <span class="form-hint">Scale: 0.0 to 20.0 points</span>
+                                        <span class="field-error" id="g2Error"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="studytimeInput">Weekly Study Time</label>
+                                        <select id="studytimeInput" name="studytime" required class="form-control">
+                                            <option value="1">1: &lt; 2 hours / week</option>
+                                            <option value="2" selected>2: 2 to 5 hours / week</option>
+                                            <option value="3">3: 5 to 10 hours / week</option>
+                                            <option value="4">4: &gt; 10 hours / week</option>
+                                        </select>
+                                        <span class="form-hint">Standard UCI study scale (1–4)</span>
+                                        <span class="field-error" id="studytimeError"></span>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="failuresInput">Past Class Failures</label>
+                                        <select id="failuresInput" name="failures" required class="form-control">
+                                            <option value="0" selected>0 failures</option>
+                                            <option value="1">1 failure</option>
+                                            <option value="2">2 failures</option>
+                                            <option value="3">3 failures</option>
+                                            <option value="4">4 failures</option>
+                                        </select>
+                                        <span class="form-hint">Number of previous course failures (0–4)</span>
+                                        <span class="field-error" id="failuresError"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="absencesInput">School Absences</label>
+                                    <input type="number" id="absencesInput" name="absences" min="0" max="100" step="1" value="4" required class="form-control">
+                                    <span class="form-hint">Total recorded absences (0 to 100)</span>
+                                    <span class="field-error" id="absencesError"></span>
+                                </div>
+
+                                <div id="formAlert" class="alert-box alert-error" style="display: none;"></div>
+
+                                <div class="form-actions">
+                                    <button type="submit" id="submitBtn" class="btn btn-primary">
+                                        <span id="btnText">Generate Prediction</span>
+                                        <span id="btnSpinner" class="btn-spinner" style="display: none;"></span>
+                                    </button>
+                                    <button type="button" id="resetBtn" class="btn btn-secondary">Reset Values</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Results Card Area -->
+                        <div class="card result-card" id="resultCardArea">
+                            <div class="result-placeholder" id="resultPlaceholder">
+                                <div class="placeholder-icon">📊</div>
+                                <h3>Prediction Results</h3>
+                                <p>Submit student attributes to compute predicted final scores using Linear Regression and SVR.</p>
+                            </div>
+
+                            <div class="result-content" id="resultContent" style="display: none;">
+                                <div class="result-header">
+                                    <span class="result-badge">Predicted Final Grade (G3)</span>
+                                    <span class="result-date" id="resultTimestamp">Just now</span>
+                                </div>
+
+                                <div class="prediction-cards-container">
+                                    <!-- Linear Regression Result -->
+                                    <div class="pred-subcard pred-lr">
+                                        <span class="pred-label">Linear Regression</span>
+                                        <div class="pred-score-wrapper">
+                                            <span class="pred-score" id="lrPredScore">0.00</span>
+                                            <span class="pred-max">/ 20</span>
+                                        </div>
+                                        <span class="pred-tag" id="lrTierTag">Pass</span>
+                                    </div>
+
+                                    <!-- SVR Result -->
+                                    <div class="pred-subcard pred-svr">
+                                        <span class="pred-label">Support Vector Regression</span>
+                                        <div class="pred-score-wrapper">
+                                            <span class="pred-score" id="svrPredScore">0.00</span>
+                                            <span class="pred-max">/ 20</span>
+                                        </div>
+                                        <span class="pred-tag" id="svrTierTag">Pass</span>
+                                    </div>
+                                </div>
+
+                                <div class="delta-summary">
+                                    <span class="delta-label">Model Deviation (|LR - SVR|):</span>
+                                    <strong id="modelDelta">0.00 points</strong>
+                                </div>
+
+                                <div class="academic-tier-info">
+                                    <p><strong>Grading Scale Reference:</strong> 16–20: Distinction • 14–15: Merit • 10–13: Pass • 0–9: Fail</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 3: MODEL COMPARISON & CHART -->
+                <section id="comparison" class="dashboard-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>Model Comparison & Benchmark Visualizer</h2>
+                            <p class="section-desc">Comparative evaluation of Linear Regression vs Support Vector Regression metrics.</p>
+                        </div>
+                    </div>
+
+                    <div class="comparison-grid">
+                        <div class="card chart-card">
+                            <div class="chart-header">
+                                <h3>Metric Comparison Bar Chart</h3>
+                                <span class="chart-tag">Actual Test Set Metrics</span>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="modelComparisonChart" aria-label="Model Comparison Chart" role="img"></canvas>
+                                <div id="chartFallbackMessage" class="chart-fallback" style="display: none;">
+                                    <p>Metric comparison chart will display here once models are trained and metrics are available.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card guide-card">
+                            <h3>Metric Interpretation Guide</h3>
+                            <div class="guide-item">
+                                <h4>Mean Absolute Error (MAE)</h4>
+                                <p>Measures average prediction error magnitude in grade points. <strong>Lower values indicate better predictive accuracy.</strong></p>
+                            </div>
+                            <div class="guide-item">
+                                <h4>Root Mean Squared Error (RMSE)</h4>
+                                <p>Penalizes larger outliers more severely than MAE. <strong>Lower values indicate fewer large deviations.</strong></p>
+                            </div>
+                            <div class="guide-item">
+                                <h4>Coefficient of Determination (R²)</h4>
+                                <p>Represents the percentage of score variance captured by the features. <strong>Higher values (closer to 1.0) reflect a better model fit.</strong></p>
+                            </div>
+                            <div class="guide-item model-notes">
+                                <h4>Why Compare Both?</h4>
+                                <p><strong>Linear Regression</strong> provides an interpretable baseline, while <strong>SVR (RBF Kernel)</strong> can capture non-linear relationships in study patterns and failure counts.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 4: RECENT SESSION PREDICTIONS -->
+                <section id="recent" class="dashboard-section">
+                    <div class="section-header recent-header">
+                        <div>
+                            <h2>Recent Predictions (Active Session)</h2>
+                            <p class="section-desc">Predictions generated during your current browser session (in-memory only; resets on page reload).</p>
+                        </div>
+                        <button id="clearHistoryBtn" class="btn btn-outline" disabled>Clear Session History</button>
+                    </div>
+
+                    <div class="card table-card">
+                        <div class="table-responsive">
+                            <table class="session-table" id="sessionTable">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Time</th>
+                                        <th>G1</th>
+                                        <th>G2</th>
+                                        <th>Study Time</th>
+                                        <th>Failures</th>
+                                        <th>Absences</th>
+                                        <th>Linear Regression</th>
+                                        <th>SVR</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sessionTableBody">
+                                    <tr id="emptySessionRow">
+                                        <td colspan="9" class="empty-table-cell">No predictions generated yet in this session.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                {% endblock %}
+            </main>
+
+            <!-- App Footer -->
+            <footer class="app-footer">
+                <div class="footer-content">
+                    <p>&copy; Student Performance Prediction System • Built with Flask, Scikit-learn, Pandas &amp; Chart.js</p>
+                    <p class="footer-status">API Status: <span id="footerApiStatus">Connecting...</span></p>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Client Application JavaScript -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
